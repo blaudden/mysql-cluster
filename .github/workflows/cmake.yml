@@ -1,0 +1,42 @@
+name: Build and test MySQL NDB Cluster
+
+on:
+  push:
+    branches: [ 8.0 ]
+  pull_request:
+    branches: [ 8.0 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install build tools
+      run: sudo apt-get install ninja-build
+
+    - name: Download boost
+      run: |
+        cd ${{github.workspace}}
+        mkdir boost
+        cd boost
+        wget https://boostorg.jfrog.io/artifactory/main/release/1.73.0/source/boost_1_73_0.tar.gz 
+        ls . 
+
+    - name: Use compile-cluster to configure and build
+      env: 
+        WITH_BOOST: ${{github.workspace}}/boost/
+      run: |
+        ls $WITH_BOOST
+        cd ${{github.workspace}}
+        mkdir bld
+        cd bld
+        ../storage/ndb/compile-cluster --cmake-export-compile-commands=1 --debug --with-unit-tests=1 --build-type="Ninja"
+
+    - name: Run ndbcluster suite to check that build is ok
+      run: |
+        cd ${{github.workspace}}
+        cd bld/mysql-test/
+        perl ./mysql-test-run.pl --suite=ndbcluster
+
