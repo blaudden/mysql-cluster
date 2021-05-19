@@ -1,0 +1,30 @@
+name: Build MySQL NDB Cluster with CMake
+
+on:
+  push:
+    branches: [ 8.0 ]
+  pull_request:
+    branches: [ 8.0 ]
+
+env:
+  
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Install build tools
+      run: sudo apt-get install ninja-build
+
+    - name: Configure and build using compile-cluster script
+      run: cd build && ../storage/ndb/compile-cluster --cmake-export-compile-commands=1 --debug --with-unit-tests=1 --with-meb=0 --mysql-project-name=cluster-8.0 --build-type="CodeBlocks Ninja"
+
+    - name: Test
+      run: cd bld/mysql-test && ./mysql-test-run.pl --with-ndbcluster-only
+      
