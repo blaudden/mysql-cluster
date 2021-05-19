@@ -6,8 +6,6 @@ on:
   pull_request:
     branches: [ 8.0 ]
 
-env:
-  
 jobs:
   build:
     # The CMake configure and build commands are platform agnostic and should work equally
