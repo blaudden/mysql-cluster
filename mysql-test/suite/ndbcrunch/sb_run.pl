@@ -62,6 +62,7 @@ my $opt_rows = $ENV{CRUNCH_ROWS} || 10000000; # 10M
 my $opt_time = $ENV{CRUNCH_TIME} || 30; # seconds
 my $opt_events = $ENV{CRUNCH_EVENTS} || 0; # => run until time elapsed
 my $opt_threads = $ENV{CRUNCH_THREADS}; # Use specific threads number
+my $opt_stage;
 my $opt_report_interval = 1;  # seconds
 my $opt_verbosity = 3; # Default of sysbench is 3
 my $opt_debug;
@@ -88,6 +89,7 @@ GetOptions(
   'events=i'            => \$opt_events,
   'time=i'              => \$opt_time,
   'threads=i'           => \$opt_threads,
+  'stage=s'             => \$opt_stage,
   'autoinc'             => \$opt_autoinc,
   'secondary'           => \$opt_secondary_index,
   'verbose=i'           => \$opt_verbosity,
@@ -131,22 +133,29 @@ push(@args, "--create-secondary=$opt_secondary_index");
 
 push(@args, @ARGV);
 
-print_header("Prepare");
-bench($opt_bench_name, "prepare", @args);
+if (!defined $opt_stage || $opt_stage eq 'prepare') {
+  print_header("Prepare");
+  bench($opt_bench_name, "prepare", @args);
+}
 
-if ($opt_warmup) {
+if ((!defined $opt_stage && $opt_warmup) ||
+    (defined $opt_stage && $opt_stage eq 'warmup')) {
   print_header("Warmup");
   bench($opt_bench_name, "warmup", @args);
 }
 
-foreach my $thread ( threads() ) {
-  my $threads = "--threads=$thread";
-  print_header("Run $threads");
-  bench($opt_bench_name, "run", @args, $threads);
+if (!defined $opt_stage || $opt_stage eq 'run') {
+  foreach my $thread ( threads() ) {
+    my $threads = "--threads=$thread";
+    print_header("Run $threads");
+    bench($opt_bench_name, "run", @args, $threads);
+  }
 }
 
-print_header("Cleanup");
-bench($opt_bench_name, "cleanup", @args);
+if (!defined $opt_stage || $opt_stage eq 'cleanup') {
+  print_header("Cleanup");
+  bench($opt_bench_name, "cleanup", @args);
+}
 
 exit(0);
 
