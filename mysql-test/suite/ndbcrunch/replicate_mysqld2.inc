@@ -8,18 +8,32 @@
 #echo MYSQLD2_SOCK $MYSQLD2_SOCK;
 
 --echo # Save source binlog position
-let $source_file= query_get_value(SHOW BINARY LOG STATUS, File, 1);
-let $source_pos= query_get_value(SHOW BINARY LOG STATUS, Position, 1);
+if (!$source_file) {
+  let $source_file= query_get_value(SHOW BINARY LOG STATUS, File, 1);
+}
+if (!$source_pos) {
+  let $source_pos= query_get_value(SHOW BINARY LOG STATUS, Position, 1);
+}
 #echo source_file: $source_file;
 #echo source_pos: $source_pos;
 
 --echo ## Connect to second mysqld, then start replicating from first mysqld
 --connect(mysqld2,127.0.0.1,root,,test,$MYSQLD2_PORT,)
 
-eval
-CHANGE REPLICATION SOURCE TO
-  SOURCE_HOST='127.0.0.1',
-  SOURCE_PORT=$MYSQLD1_PORT;
+if (!$binlog_start_file) {
+  eval
+  CHANGE REPLICATION SOURCE TO
+    SOURCE_HOST='127.0.0.1',
+    SOURCE_PORT=$MYSQLD1_PORT;
+}
+if ($binlog_start_file) {
+  eval
+  CHANGE REPLICATION SOURCE TO
+    SOURCE_HOST='127.0.0.1',
+    SOURCE_PORT=$MYSQLD1_PORT,
+    SOURCE_LOG_FILE='$binlog_start_file',
+    SOURCE_LOG_POS=$binlog_start_pos;
+}
 
 #query_vertical SHOW REPLICA STATUS;
 

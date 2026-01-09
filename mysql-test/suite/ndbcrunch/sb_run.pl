@@ -76,6 +76,8 @@ my $opt_secondary_index = 0;
 # thus reducing throughput
 my $rand_type = "uniform";
 
+my $opt_stage = "all";
+
 Getopt::Long::Configure("pass_through", "no_auto_abbrev");
 GetOptions(
   'port=i'              => \@opt_ports,
@@ -92,7 +94,8 @@ GetOptions(
   'secondary'           => \$opt_secondary_index,
   'verbose=i'           => \$opt_verbosity,
   'debug'               => \$opt_debug,
-  'report-interval=i'   => \$opt_report_interval
+  'report-interval=i'   => \$opt_report_interval,
+  'stage=s'             => \$opt_stage
 ) or die "Could not read arguments";
 
 my $sb = "sysbench";
@@ -131,22 +134,30 @@ push(@args, "--create-secondary=$opt_secondary_index");
 
 push(@args, @ARGV);
 
-print_header("Prepare");
-bench($opt_bench_name, "prepare", @args);
-
-if ($opt_warmup) {
-  print_header("Warmup");
-  bench($opt_bench_name, "warmup", @args);
+if ($opt_stage eq "all" || $opt_stage eq "prepare") {
+  print_header("Prepare");
+  bench($opt_bench_name, "prepare", @args);
 }
 
-foreach my $thread ( threads() ) {
-  my $threads = "--threads=$thread";
-  print_header("Run $threads");
-  bench($opt_bench_name, "run", @args, $threads);
+if ($opt_stage eq "all" || $opt_stage eq "warmup") {
+  if ($opt_warmup) {
+    print_header("Warmup");
+    bench($opt_bench_name, "warmup", @args);
+  }
 }
 
-print_header("Cleanup");
-bench($opt_bench_name, "cleanup", @args);
+if ($opt_stage eq "all" || $opt_stage eq "run") {
+  foreach my $thread ( threads() ) {
+    my $threads = "--threads=$thread";
+    print_header("Run $threads");
+    bench($opt_bench_name, "run", @args, $threads);
+  }
+}
+
+if ($opt_stage eq "all" || $opt_stage eq "cleanup") {
+  print_header("Cleanup");
+  bench($opt_bench_name, "cleanup", @args);
+}
 
 exit(0);
 
